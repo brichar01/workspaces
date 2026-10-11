@@ -1,0 +1,8 @@
+# Podman-only overlay. Selected automatically when CONTAINER_ENGINE=podman.
+#
+# Rootless Podman maps container UIDs into a subuid range, so a bare host
+# UID/GID would not own the bind mount. keep-id maps the host user to the
+# container user instead.
+services:
+  agent:
+    userns_mode: keep-id

@@ -1,0 +1,18 @@
+# Local development overrides. Compose merges this over compose.yaml.
+services:
+  agent:
+    environment:
+      HIVE_DEV: "1"
+    # Example: expose a workspace dev server.
+    # ports:
+    #   - "127.0.0.1:3000:3000"
+
+# To live-reload the hive service while editing it, add --watch to the service
+# command (do NOT set NODE_OPTIONS globally: it would also wrap `npm ci`):
+#
+#   command:
+#     - node
+#     - --watch
+#     - /workspace/hive.nvim/node/src/main.ts
+#     - --tcp
+#     - 0.0.0.0:7777

@@ -1,0 +1,17 @@
+{
+  "theme": "dark",
+  "defaultProvider": "deepseek",
+  "defaultModel": "deepseek-flash",
+  "defaultThinkingLevel": "low",
+  "defaultTools": [
+    "read",
+    "bash",
+    "edit",
+    "write",
+    "grep",
+    "find",
+    "ls"
+  ],
+  "defaultProjectTrust": "always",
+  "showCacheMissNotices": false
+}

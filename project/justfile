@@ -1,0 +1,44 @@
+set shell := ["bash", "-uc"]
+
+# ---------------------------------------------------------------------------
+# Project template repo.
+#
+# Builds the universal base image and scaffolds new workspaces. Day-to-day work
+# happens in a workspace's own justfile.
+# ---------------------------------------------------------------------------
+
+base_image := env_var_or_default("HIVE_BASE_IMAGE", "hive-base:dev")
+container_engine := env_var_or_default("CONTAINER_ENGINE", "podman")
+
+# Build the universal harness base image.
+base-build:
+    {{ container_engine }} build -t {{ base_image }} -f Dockerfile .
+
+# Scaffold a new workspace from templates/workspace.
+new-workspace name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -e "{{ name }}" ]; then
+        echo "{{ name }} already exists" >&2
+        exit 1
+    fi
+    cp -r templates/workspace "{{ name }}"
+    printf 'Created %s.\n\nNext:\n' "{{ name }}"
+    printf '  1. edit %s/manifest/west.yml and add the repositories\n' "{{ name }}"
+    printf '  2. add their toolchains to %s/Dockerfile\n' "{{ name }}"
+    printf '  3. update the dependency table in %s/AGENTS.md\n' "{{ name }}"
+    printf '  4. edit %s/.gitignore with the project paths\n' "{{ name }}"
+    printf '  5. cd %s && just init\n' "{{ name }}"
+
+# Static checks for the template itself.
+lint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v shellcheck >/dev/null 2>&1; then
+        shellcheck scripts/*.sh templates/workspace/scripts/*.sh
+    else
+        echo "shellcheck not installed; skipping"
+    fi
+
+doctor:
+    scripts/doctor.sh

@@ -1,0 +1,80 @@
+set shell := ["bash", "-uc"]
+
+# ---------------------------------------------------------------------------
+# Host-side lifecycle for a hive workspace.
+#
+# Runtime commands are dispatched through scripts/engine.sh, which handles the
+# Docker/Podman and devcontainer/compose differences.
+# ---------------------------------------------------------------------------
+
+# Start the environment from a fresh checkout.
+init:
+    scripts/engine.sh preflight
+    scripts/engine.sh ensure-base
+    @if [ ! -d .west ]; then west init -l manifest; fi
+    west update
+    scripts/engine.sh up
+    @just doctor
+
+# West + git network operations run on the host, never in the container.
+update:
+    west update
+
+# Build the base harness image from a sibling project checkout.
+base:
+    @cd "{{ env_var_or_default('HIVE_PROJECT_DIR', '../project') }}" && just base-build
+
+up:
+    scripts/engine.sh up
+
+down:
+    scripts/engine.sh down
+
+rebuild:
+    scripts/engine.sh rebuild
+
+# Open a shell in the running container.
+shell:
+    scripts/engine.sh exec bash -l
+
+# Run any command in the container: `just exec west list`
+exec *ARGS:
+    scripts/engine.sh exec {{ ARGS }}
+
+logs *ARGS:
+    scripts/engine.sh logs agent {{ ARGS }}
+
+ps:
+    scripts/engine.sh ps
+
+# Run the harness/workspace checks inside the container.
+doctor:
+    scripts/engine.sh exec hive-doctor
+
+# --- container-side recipes (also used by devcontainer lifecycle hooks) ----
+
+# Runs once when the devcontainer is created.
+_post-create:
+    @test -f .env || cp .env.example .env 2>/dev/null || true
+    @echo "workspace created; run 'just update' on the host, then 'just doctor'"
+
+# Runs on every container start.
+_post-start:
+    @hive-doctor --quick || true
+
+# --- per-workspace checks ---------------------------------------------------
+# Adjust these to the repositories in manifest/west.yml. Keeping the entrypoints
+# stable means agents and humans run the same commands.
+
+# Run checks for every project.
+check:
+    scripts/engine.sh exec just _check
+
+test:
+    scripts/engine.sh exec just _test
+
+_check:
+    @echo "no workspace checks configured yet; edit the justfile"
+
+_test:
+    @echo "no workspace tests configured yet; edit the justfile"

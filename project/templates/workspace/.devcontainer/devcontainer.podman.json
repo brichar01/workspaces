@@ -1,0 +1,25 @@
+{
+  "name": "hive-workspace (podman)",
+  "dockerComposeFile": [
+    "../compose.yaml",
+    "../compose.override.yaml",
+    "../compose.podman.yaml",
+    "compose.devcontainer.yaml"
+  ],
+  "service": "agent",
+  "runServices": ["agent"],
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "none",
+  "overrideCommand": false,
+  "remoteUser": "agent",
+  "updateRemoteUserUID": false,
+  "initializeCommand": "scripts/engine.sh preflight",
+  "postCreateCommand": "just _post-create",
+  "postStartCommand": "just _post-start",
+  "waitFor": "postStartCommand",
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  }
+}

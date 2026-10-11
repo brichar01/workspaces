@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(just:*)",
+      "Bash(west list:*)",
+      "Bash(west manifest:*)",
+      "Read"
+    ],
+    "deny": []
+  }
+}

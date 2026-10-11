@@ -1,0 +1,13 @@
+# West metadata (created by `west init`).
+/.west/
+
+# Local secrets and configuration.
+/.env
+
+# West-managed project checkouts (cloned by `west update` on the host).
+# List every project path from manifest/west.yml.
+/hive.nvim/
+
+# Caches and logs.
+node_modules/
+*.log

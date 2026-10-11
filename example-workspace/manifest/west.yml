@@ -1,0 +1,26 @@
+# West manifest for this workspace.
+#
+# Resolved on the HOST: `west` and git network access never move into the
+# container. The workspace root is the west topdir; this file lives in
+# manifest/ because west requires the manifest repository to be a subdirectory
+# of the topdir.
+manifest:
+  version: "0.13"
+
+  self:
+    path: manifest
+
+  projects:
+    # The harness. `hive.nvim` must be checkout-able on the host and is mounted
+    # into the container at /workspace/hive.nvim.
+    - name: hive.nvim
+      url: git@github.com:brichar01/hive.nvim.git
+      revision: main
+      path: hive.nvim
+
+    # Example second repository (public, so the template can be exercised
+    # without secrets). Replace with the real repositories for the workspace.
+    - name: hello-world
+      url: https://github.com/octocat/Hello-World.git
+      revision: master
+      path: hello-world

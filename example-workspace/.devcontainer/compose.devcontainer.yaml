@@ -1,0 +1,13 @@
+# Dev-only overlay consumed by the devcontainer CLI on top of the workspace
+# compose files. Keep it limited to development conveniences.
+services:
+  agent:
+    environment:
+      HIVE_DEV: "1"
+    # Example: live-reload the hive service while editing it.
+    # command:
+    #   - node
+    #   - --watch
+    #   - /workspace/hive.nvim/node/src/main.ts
+    #   - --tcp
+    #   - 0.0.0.0:7777
