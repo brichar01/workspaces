@@ -1,7 +1,7 @@
 set shell := ["bash", "-uc"]
 
 # ---------------------------------------------------------------------------
-# Host-side lifecycle for a hive workspace.
+# Host-side lifecycle for a workspace.
 #
 # Runtime commands are dispatched through scripts/engine.sh, which handles the
 # Docker/Podman and devcontainer/compose differences.
@@ -20,9 +20,9 @@ init:
 update:
     west update
 
-# Build the base harness image from a sibling project checkout.
+# Build the base image from a sibling project checkout.
 base:
-    @cd "{{ env_var_or_default('HIVE_PROJECT_DIR', '../project') }}" && just base-build
+    @cd "{{ env_var_or_default('WORKSPACES_PROJECT_DIR', '../project') }}" && just base-build
 
 up:
     scripts/engine.sh up
@@ -42,14 +42,14 @@ exec *ARGS:
     scripts/engine.sh exec {{ ARGS }}
 
 logs *ARGS:
-    scripts/engine.sh logs agent {{ ARGS }}
+    scripts/engine.sh logs workspaces_dev {{ ARGS }}
 
 ps:
     scripts/engine.sh ps
 
-# Run the harness/workspace checks inside the container.
+# Run the workspace and extension checks inside the container.
 doctor:
-    scripts/engine.sh exec hive-doctor
+    scripts/engine.sh exec workspaces_doctor
 
 # --- container-side recipes (also used by devcontainer lifecycle hooks) ----
 
@@ -60,7 +60,7 @@ _post-create:
 
 # Runs on every container start.
 _post-start:
-    @hive-doctor --quick || true
+    @workspaces_doctor --quick || true
 
 # --- per-workspace checks ---------------------------------------------------
 # Adjust these to the repositories in manifest/west.yml. Keeping the entrypoints

@@ -6,7 +6,7 @@
 # Usage: engine.sh <command> [args...]
 #
 #   preflight            validate the engine and create .env if missing
-#   ensure-base          build the base image from HIVE_PROJECT_DIR if absent
+#   ensure-base          build the base image from WORKSPACES_PROJECT_DIR if absent
 #   up                   start the workspace (devcontainer CLI, else compose)
 #   up --compose         force the raw compose path
 #   down                 stop and remove the stack
@@ -26,7 +26,7 @@ export HOST_UID HOST_GID
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-# Pick up .env (HIVE_BASE_IMAGE, HIVE_PROJECT_DIR, credentials, ...).
+# Pick up .env (WORKSPACES_BASE_IMAGE, WORKSPACES_EXTENSIONS, credentials, ...).
 if [ -f .env ]; then
     set -a
     # shellcheck disable=SC1091
@@ -34,16 +34,60 @@ if [ -f .env ]; then
     set +a
 fi
 
-base_image="${HIVE_BASE_IMAGE:-hive-base:dev}"
-project_dir="${HIVE_PROJECT_DIR:-../project}"
+base_image="${WORKSPACES_BASE_IMAGE:-workspaces_base:dev}"
+project_dir="${WORKSPACES_PROJECT_DIR:-../project}"
+extensions_dir="${WORKSPACES_EXTENSIONS_DIR:-${project_dir}/extensions}"
+stage_dir=.workspaces/extensions
 
 compose_args=(-f compose.yaml -f compose.override.yaml)
-dc_args=(--workspace-folder .)
+dc_config=.devcontainer/devcontainer.json
 if [ "$ENGINE" = "podman" ]; then
     compose_args+=(-f compose.podman.yaml)
-    dc_args+=(--override-config .devcontainer/devcontainer.podman.json)
+    dc_config=.devcontainer/devcontainer.podman.json
     export DOCKER_HOST="${DOCKER_HOST:-unix:///run/user/${HOST_UID}/podman/podman.sock}"
 fi
+
+# Copy the extensions named in WORKSPACES_EXTENSIONS into the build context,
+# where the workspace Dockerfile installs them.
+rm -rf "$stage_dir"
+mkdir -p "$stage_dir"
+for name in ${WORKSPACES_EXTENSIONS:-}; do
+    if [ ! -d "${extensions_dir}/${name}" ]; then
+        echo "engine.sh: extension '${name}' not found in ${extensions_dir}" >&2
+        exit 1
+    fi
+    cp -r "${extensions_dir}/${name}" "${stage_dir}/${name}"
+done
+
+# Merge each extension's compose fragment. The devcontainer CLI takes compose
+# files only from its config, so a generated copy lists them too.
+shopt -s nullglob
+fragments=("$stage_dir"/*/compose.yaml)
+shopt -u nullglob
+for fragment in "${fragments[@]}"; do
+    compose_args+=(-f "$fragment")
+done
+if [ "${#fragments[@]}" -gt 0 ]; then
+    python3 - "$dc_config" .workspaces/devcontainer.json "${fragments[@]}" <<'PY'
+import json
+import sys
+
+base, out, *fragments = sys.argv[1:]
+with open(base) as f:
+    config = json.load(f)
+# Paths resolve against the generated file in .workspaces/, not .devcontainer/.
+config["dockerComposeFile"] = [
+    path if path.startswith("../") else f"../.devcontainer/{path}"
+    for path in config["dockerComposeFile"]
+] + [path.removeprefix(".workspaces/") for path in fragments]
+with open(out, "w") as f:
+    json.dump(config, f, indent=2)
+PY
+    dc_config=.workspaces/devcontainer.json
+fi
+
+dc_args=(--workspace-folder .)
+[ "$dc_config" = .devcontainer/devcontainer.json ] || dc_args+=(--override-config "$dc_config")
 
 have_dc() {
     command -v "$DEVCONTAINER" >/dev/null 2>&1 && [ -f .devcontainer/devcontainer.json ]
@@ -89,7 +133,7 @@ ensure_base() {
         "$ENGINE" build -t "$base_image" -f "${project_dir}/Dockerfile" "$project_dir"
     else
         echo "engine.sh: base image ${base_image} missing and ${project_dir}/Dockerfile not found." >&2
-        echo "           set HIVE_PROJECT_DIR or run 'just base' in the project repo." >&2
+        echo "           set WORKSPACES_PROJECT_DIR or run 'just base' in the project repo." >&2
         exit 1
     fi
 }
@@ -109,7 +153,7 @@ rebuild() {
     if have_dc; then
         "$DEVCONTAINER" up "${dc_args[@]}" --remove-existing-container
     else
-        compose build --no-cache agent
+        compose build --no-cache workspaces_dev
         compose up -d --force-recreate
     fi
 }
@@ -119,7 +163,7 @@ exec_cmd() {
     if have_dc; then
         "$DEVCONTAINER" exec "${dc_args[@]}" "$@"
     else
-        compose exec agent "$@"
+        compose exec workspaces_dev "$@"
     fi
 }
 

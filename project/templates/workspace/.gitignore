@@ -1,12 +1,14 @@
 # West metadata (created by `west init`).
 /.west/
 
+# Staged extensions and generated config (written by scripts/engine.sh).
+/.workspaces/
+
 # Local secrets and configuration.
 /.env
 
 # West-managed project checkouts (cloned by `west update` on the host).
 # List every project path from manifest/west.yml.
-/hive.nvim/
 
 # Caches and logs.
 node_modules/

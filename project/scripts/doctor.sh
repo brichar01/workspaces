@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# hive-doctor: verify the workspace and harness are healthy.
+# workspaces_doctor: verify the workspace and its extensions are healthy.
 #
 # Runs both on the host (after `west init`) and inside the container.
-# Usage: hive-doctor [--quick]
+# Usage: workspaces_doctor [--quick]
+#
+# Each extension can add checks as /opt/extensions/<name>/doctor.d/*.sh. They
+# are sourced, so they can call ok, bad, warnf and have, and read $quick.
 set -uo pipefail
 
 quick=0
@@ -18,7 +21,7 @@ warnf(){ printf '  \033[33mwarn\033[0m %s\n' "$1"; warn=$((warn + 1)); }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-echo "hive-doctor: $(pwd)"
+echo "workspaces_doctor: $(pwd)"
 
 # --- tools -------------------------------------------------------------------
 for tool in git just; do
@@ -53,37 +56,14 @@ else
     bad "manifest/west.yml missing"
 fi
 
-# --- harness (container) -----------------------------------------------------
-if [ -d /workspace ]; then
-    have node && ok "node present ($(node --version 2>/dev/null))" || bad "node missing"
-    have pi   && ok "pi present"   || bad "pi missing"
-    have claude && ok "claude present" || warnf "claude present: no"
-    [ -n "${PI_CODING_AGENT_DIR:-}" ] && ok "PI_CODING_AGENT_DIR=${PI_CODING_AGENT_DIR}" || warnf "PI_CODING_AGENT_DIR unset"
-
-    for link in "${PI_CODING_AGENT_DIR:-/home/agent/.pi/agent}/settings.json" \
-                "${HOME:-/home/agent}/.claude/settings.json"; do
-        if [ -e "${link}" ]; then
-            ok "config: ${link}"
-        else
-            warnf "config missing: ${link}"
-        fi
-    done
-
-    if have node && [ -f "${HIVE_NODE_DIR:-/workspace/hive.nvim/node}/src/main.ts" ]; then
-        ok "hive node entrypoint present"
-    else
-        warnf "hive node entrypoint not found at ${HIVE_NODE_DIR:-/workspace/hive.nvim/node}"
-    fi
-
-    if [ "${quick}" -eq 0 ] && have bash; then
-        if (exec 3<>/dev/tcp/127.0.0.1/7777) 2>/dev/null; then
-            ok "hive agent TCP service reachable on 127.0.0.1:7777"
-        else
-            warnf "hive agent TCP service not reachable on 127.0.0.1:7777"
-        fi
-    fi
-fi
+# --- extensions --------------------------------------------------------------
+shopt -s nullglob
+for check in /opt/extensions/*/doctor.d/*.sh; do
+    # shellcheck disable=SC1090
+    . "${check}"
+done
+shopt -u nullglob
 
 echo
-printf 'hive-doctor: %d ok, %d warnings, %d failures\n' "${pass}" "${warn}" "${fail}"
+printf 'workspaces_doctor: %d ok, %d warnings, %d failures\n' "${pass}" "${warn}" "${fail}"
 [ "${fail}" -eq 0 ]

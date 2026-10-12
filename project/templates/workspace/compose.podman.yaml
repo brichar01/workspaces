@@ -4,5 +4,5 @@
 # UID/GID would not own the bind mount. keep-id maps the host user to the
 # container user instead.
 services:
-  agent:
+  workspaces_dev:
     userns_mode: keep-id

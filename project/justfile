@@ -7,35 +7,45 @@ set shell := ["bash", "-uc"]
 # happens in a workspace's own justfile.
 # ---------------------------------------------------------------------------
 
-base_image := env_var_or_default("HIVE_BASE_IMAGE", "hive-base:dev")
+base_image := env_var_or_default("WORKSPACES_BASE_IMAGE", "workspaces_base:dev")
 container_engine := env_var_or_default("CONTAINER_ENGINE", "podman")
 
-# Build the universal harness base image.
+# Build the universal base image.
 base-build:
     {{ container_engine }} build -t {{ base_image }} -f Dockerfile .
 
-# Scaffold a new workspace from templates/workspace.
+# Scaffold a new workspace from templates/workspace, next to this project.
 new-workspace name:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ -e "{{ name }}" ]; then
-        echo "{{ name }} already exists" >&2
+    target="../{{ name }}"
+    # Compose project and image names allow only these characters.
+    if [[ ! "{{ name }}" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+        echo "{{ name }}: use lowercase letters, digits, '-' and '_'" >&2
         exit 1
     fi
-    cp -r templates/workspace "{{ name }}"
-    printf 'Created %s.\n\nNext:\n' "{{ name }}"
-    printf '  1. edit %s/manifest/west.yml and add the repositories\n' "{{ name }}"
-    printf '  2. add their toolchains to %s/Dockerfile\n' "{{ name }}"
-    printf '  3. update the dependency table in %s/AGENTS.md\n' "{{ name }}"
-    printf '  4. edit %s/.gitignore with the project paths\n' "{{ name }}"
-    printf '  5. cd %s && just init\n' "{{ name }}"
+    if [ -e "${target}" ]; then
+        echo "${target} already exists" >&2
+        exit 1
+    fi
+    cp -r templates/workspace "${target}"
+    sed -i -e 's/^COMPOSE_PROJECT_NAME=$/COMPOSE_PROJECT_NAME={{ name }}/' \
+        -e 's/^WORKSPACE_IMAGE=$/WORKSPACE_IMAGE={{ name }}:dev/' \
+        "${target}/.env.example"
+    printf 'Created %s.\n\nNext:\n' "${target}"
+    printf '  1. edit %s/manifest/west.yml and add the repositories\n' "${target}"
+    printf '  2. add their toolchains to %s/Dockerfile\n' "${target}"
+    printf '  3. update the dependency table in %s/AGENTS.md\n' "${target}"
+    printf '  4. edit %s/.gitignore with the project paths\n' "${target}"
+    printf '  5. cd %s && just init\n' "${target}"
 
 # Static checks for the template itself.
 lint:
     #!/usr/bin/env bash
     set -euo pipefail
     if command -v shellcheck >/dev/null 2>&1; then
-        shellcheck scripts/*.sh templates/workspace/scripts/*.sh
+        shellcheck scripts/*.sh templates/workspace/scripts/*.sh extensions/*/install.sh
+        shellcheck -s bash extensions/*/doctor.d/*.sh
     else
         echo "shellcheck not installed; skipping"
     fi

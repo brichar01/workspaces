@@ -7,7 +7,6 @@ repository `CLAUDE.md` / `AGENTS.md` files add project-specific detail.
 
 - You are running inside a container. The workspace is mounted at `/workspace`.
 - Prefer `just <recipe>` for routine work.
-- The harness checkout is at `/workspace/hive.nvim`.
 
 ## Boundaries
 

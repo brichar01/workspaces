@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 #
-# Workspace image: the base harness plus everything the west projects need.
+# Workspace image: the base image, the enabled extensions, and everything the
+# west projects need.
 # Keep project-specific toolchains here, not in the base image.
 
-ARG HIVE_BASE_IMAGE=hive-base:dev
-FROM ${HIVE_BASE_IMAGE}
+ARG WORKSPACES_BASE_IMAGE=workspaces_base:dev
+FROM ${WORKSPACES_BASE_IMAGE}
 
 USER root
 
@@ -20,4 +21,9 @@ USER root
 #
 # Document each addition in AGENTS.md (directory -> package manager).
 
-USER agent
+# --- extensions --------------------------------------------------------------
+# scripts/engine.sh stages the extensions named in WORKSPACES_EXTENSIONS here.
+COPY .workspaces/extensions/ /opt/extensions/
+RUN workspaces_install_extensions
+
+USER workspaces_user

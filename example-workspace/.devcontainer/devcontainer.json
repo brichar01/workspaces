@@ -1,16 +1,16 @@
 {
-  "name": "hive-workspace",
+  "name": "workspaces_workspace",
   "dockerComposeFile": [
     "../compose.yaml",
     "../compose.override.yaml",
     "compose.devcontainer.yaml"
   ],
-  "service": "agent",
-  "runServices": ["agent"],
+  "service": "workspaces_dev",
+  "runServices": ["workspaces_dev"],
   "workspaceFolder": "/workspace",
   "shutdownAction": "none",
   "overrideCommand": false,
-  "remoteUser": "agent",
+  "remoteUser": "workspaces_user",
   "updateRemoteUserUID": true,
   "initializeCommand": "scripts/engine.sh preflight",
   "postCreateCommand": "just _post-create",

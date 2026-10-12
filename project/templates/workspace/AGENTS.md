@@ -9,7 +9,7 @@ subdirectories.
 ```sh
 just init      # preflight, base image, west init + update, start container, doctor
 just shell     # shell inside the container
-just doctor    # verify harness and workspace
+just doctor    # verify the workspace and its extensions
 ```
 
 From a fresh clone the only prerequisites are `git`, `just`, `west`
@@ -26,33 +26,43 @@ the container.
 | Push changes | host | `git push` inside a project, or `just push` if defined |
 | Local git history work | container | `git add/commit/diff/log` |
 | Read the manifest | container | `west list`, `west manifest` |
-| Run harness/tests | container | `just check`, `just test`, `just doctor` |
-| Long-running agent | container | the `agent` service on `127.0.0.1:7777` |
+| Run checks/tests | container | `just check`, `just test`, `just doctor` |
 
 ## Layout
 
 | Path | Contents | Package manager |
 |---|---|---|
 | `manifest/west.yml` | west manifest (the source of truth for repos) | — |
-| `hive.nvim/` | harness checkout, mounted into the container | npm |
 | `scripts/engine.sh` | Docker/Podman + devcontainer dispatch | — |
 | `compose.yaml` | service, mounts, ports | — |
+| `.workspaces/` | staged extensions and generated config (gitignored) | — |
 | `.devcontainer/` | editor integration (compose mode) | — |
 | `.env` | local secrets/config (gitignored) | — |
 
 Add a row to this table whenever you add a project to `manifest/west.yml`.
 
+## Extensions
+
+Agents and other development tools are extensions, not part of the base image.
+Enable them in `.env` with `WORKSPACES_EXTENSIONS="pi claude"`, then run
+`just rebuild`. See `extensions/README.md` in the project repo for the format.
+
+| Extension | Purpose |
+|---|---|
+| — | none enabled |
+
 ## Container maintenance
 
 ```sh
 just ps          # list containers
-just logs        # follow agent logs
+just logs        # follow container logs
 just rebuild     # recreate from scratch (keeps named volumes)
 just down        # stop and remove the stack
 ```
 
-- Base image: `hive-base:dev`, built from the project repo by `just base`.
-- Workspace image: built from `Dockerfile` (extends the base).
+- Base image: `workspaces_base:dev`, built from the project repo by `just base`.
+- Workspace image: built from `Dockerfile` (extends the base, installs the
+  enabled extensions).
 - Docker/Podman differences live only in `scripts/engine.sh`.
 - `userns_mode: keep-id` is applied for rootless Podman.
 
@@ -62,9 +72,7 @@ just down        # stop and remove the stack
   git credentials work; nothing is forwarded into the container.
 - **Files owned by root** — ensure `HOST_UID`/`HOST_GID` match your host ids;
   on Podman use the `compose.podman.yaml` overlay.
-- **Agent not reachable** — check `just logs`; the service listens on
-  `127.0.0.1:7777` and the container healthcheck gates on it.
+- **Extension not found** — the name in `WORKSPACES_EXTENSIONS` must match a
+  directory in `WORKSPACES_EXTENSIONS_DIR`.
 - **`unsupported index version`** — git on the host is newer than in the image;
   set `git config --global index.version 2` for this workspace.
-- **Hive service not reloading** — `compose.override.yaml` sets
-  `NODE_OPTIONS=--watch`; restart with `just rebuild` if it is disabled.

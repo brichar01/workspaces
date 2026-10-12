@@ -8,8 +8,6 @@ repository `AGENTS.md` files add project-specific detail on top of them.
 - You are running inside a container. The workspace is mounted at `/workspace`.
 - `just` is the entrypoint for routine work. Prefer `just <recipe>` over ad hoc
   shell pipelines, and add a recipe when one is missing.
-- The harness checkout is at `/workspace/hive.nvim`. Node dependencies are
-  installed on first start.
 
 ## Boundaries
 

@@ -1,49 +1,24 @@
-name: ${COMPOSE_PROJECT_NAME:-hive-workspace}
+name: ${COMPOSE_PROJECT_NAME:?set COMPOSE_PROJECT_NAME in .env}
 
 services:
-  agent:
+  workspaces_dev:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        HIVE_BASE_IMAGE: ${HIVE_BASE_IMAGE:-hive-base:dev}
+        WORKSPACES_BASE_IMAGE: ${WORKSPACES_BASE_IMAGE:-workspaces_base:dev}
         HOST_UID: ${HOST_UID:-1000}
         HOST_GID: ${HOST_GID:-1000}
-    image: ${WORKSPACE_IMAGE:-hive-workspace:dev}
+    image: ${WORKSPACE_IMAGE:?set WORKSPACE_IMAGE in .env}
     working_dir: /workspace
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-    # Long-running Pi agent, reached by hive.nvim on the host over TCP.
-    command:
-      - node
-      - /workspace/hive.nvim/node/src/main.ts
-      - --tcp
-      - 0.0.0.0:7777
+    # Idle until an extension's compose.yaml supplies a long-running command.
+    command: ["sleep", "infinity"]
     env_file:
       - .env
-    environment:
-      PI_CODING_AGENT_DIR: /home/agent/.pi/agent
-      HIVE_NODE_DIR: /workspace/hive.nvim/node
-    ports:
-      # TCP is unencrypted: keep it on loopback.
-      - "127.0.0.1:7777:7777"
     volumes:
       - .:/workspace
-      # Persist node deps and agent sessions across container rebuilds.
-      - hive-node-modules:/workspace/hive.nvim/node/node_modules
-      - pi-sessions:/home/agent/.pi/agent/sessions
-      # --- optional local config override (uncomment to use) ---
-      # - ./config/agent:/opt/agent-config:ro
     init: true
     stdin_open: true
     tty: true
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/7777'"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 60s
-
-volumes:
-  hive-node-modules:
-  pi-sessions:

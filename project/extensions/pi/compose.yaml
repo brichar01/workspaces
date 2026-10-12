@@ -1,0 +1,8 @@
+# Persist Pi sessions across container rebuilds.
+services:
+  workspaces_dev:
+    volumes:
+      - pi-sessions:/home/${WORKSPACES_USER:-workspaces_user}/.pi/agent/sessions
+
+volumes:
+  pi-sessions:
