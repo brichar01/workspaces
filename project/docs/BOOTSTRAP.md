@@ -19,7 +19,9 @@ just new-workspace <name>
 cd ../<name>
 ```
 
-`new-workspace` sets `COMPOSE_PROJECT_NAME` and `WORKSPACE_IMAGE` in
+`new-workspace` creates the workspace as its own git repository next to the
+project. Move it anywhere: it needs only the base image, not the project
+checkout. It also sets `COMPOSE_PROJECT_NAME` and `WORKSPACE_IMAGE` in
 `.env.example` to the workspace name. Compose refuses to start if either is
 empty, so two workspaces never share a stack, image or volumes.
 
@@ -63,6 +65,7 @@ and `claude` in `extensions/`. To enable them, uncomment and set in `.env`:
 
 ```sh
 WORKSPACES_EXTENSIONS="pi claude"
+WORKSPACES_EXTENSIONS_DIR=/path/to/workspaces/project/extensions
 ```
 
 Add the credentials they need to `.env`, and list each one in the Extensions
@@ -84,8 +87,21 @@ with real per-repo commands, then confirm `just check` and `just test` pass.
 
 ## 8. Commit
 
-Commit the workspace (manifest, Dockerfile, compose, justfile, AGENTS.md,
-.gitignore). Do **not** commit `.env` or any project checkout.
+Commit only after `just doctor`, `just check` and `just test` pass. Stage the
+workspace files (manifest, Dockerfile, compose, justfile, AGENTS.md,
+.gitignore, .env.example, scripts, .devcontainer). Do **not** commit `.env`,
+`.west/`, `.workspaces/` or any project checkout. `git status` must show none of
+them.
+
+Use one sentence-case subject line and no body. Name the workspace and the
+repositories it brings together:
+
+```sh
+git commit -m "Add <name> workspace for <repo>, <repo> and <repo>"
+```
+
+Where the workspace repository sets a commit-message rule (`.commit-msg.toml`),
+follow it.
 
 ## Checklist
 
@@ -95,4 +111,5 @@ Commit the workspace (manifest, Dockerfile, compose, justfile, AGENTS.md,
 - [ ] `AGENTS.md` dependency table matches the manifest and Dockerfile.
 - [ ] No development tool (`hive.nvim`, agents) is in the manifest.
 - [ ] `just check` and `just test` run the repositories' real checks.
+- [ ] The workspace is committed, and `git status` is clean.
 - [ ] No credentials in the image, the workspace, or git history.

@@ -32,7 +32,7 @@ just base-build        # build workspaces_base:dev
 just new-workspace my-workspace
 cd ../my-workspace
 # edit manifest/west.yml, Dockerfile, AGENTS.md, .gitignore
-just init              # preflight, base image, west update, start, doctor
+just init              # check base image, west update, start, doctor
 ```
 
 See `project/README.md` and `project/docs/BOOTSTRAP.md`.

@@ -10,11 +10,12 @@ set shell := ["bash", "-uc"]
 base_image := env_var_or_default("WORKSPACES_BASE_IMAGE", "workspaces_base:dev")
 container_engine := env_var_or_default("CONTAINER_ENGINE", "podman")
 
-# Build the universal base image.
+# Build the universal base image. Workspaces check its version label at start.
 base-build:
     {{ container_engine }} build -t {{ base_image }} -f Dockerfile .
 
-# Scaffold a new workspace from templates/workspace, next to this project.
+# Scaffold a new workspace from templates/workspace as its own git repository.
+# It is created next to this project, and can be moved anywhere afterwards.
 new-workspace name:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -32,12 +33,14 @@ new-workspace name:
     sed -i -e 's/^COMPOSE_PROJECT_NAME=$/COMPOSE_PROJECT_NAME={{ name }}/' \
         -e 's/^WORKSPACE_IMAGE=$/WORKSPACE_IMAGE={{ name }}:dev/' \
         "${target}/.env.example"
+    git -C "${target}" init -q
     printf 'Created %s.\n\nNext:\n' "${target}"
     printf '  1. edit %s/manifest/west.yml and add the repositories\n' "${target}"
     printf '  2. add their toolchains to %s/Dockerfile\n' "${target}"
     printf '  3. update the dependency table in %s/AGENTS.md\n' "${target}"
     printf '  4. edit %s/.gitignore with the project paths\n' "${target}"
     printf '  5. cd %s && just init\n' "${target}"
+    printf '  6. commit once just doctor, just check and just test pass\n'
 
 # Static checks for the template itself.
 lint:

@@ -12,8 +12,21 @@ just shell     # shell inside the container
 just doctor    # verify the workspace and its extensions
 ```
 
-From a fresh clone the only prerequisites are `git`, `just`, `west`
-(`pipx install west`), a container engine, and credentials for private repos.
+From a fresh clone the prerequisites are `git`, `just`, `west`
+(`pipx install west`), `python3`, a container engine, credentials for private
+repos, and the base image.
+
+The base image and the extensions come from the project repo,
+`git@github.com:brichar01/workspaces.git`. Clone it anywhere, then build the
+base image once per machine:
+
+```sh
+cd workspaces/project
+just base-build   # builds workspaces_base:dev
+```
+
+`just init` stops if the base image is missing or its version does not match
+`BASE_VERSION` in `scripts/engine.sh`.
 
 ## Host vs container boundary
 
@@ -45,8 +58,15 @@ Add a row to this table whenever you add a project to `manifest/west.yml`.
 ## Extensions
 
 Agents and other development tools are extensions, not part of the base image.
-Enable them in `.env` with `WORKSPACES_EXTENSIONS="pi claude"`, then run
-`just rebuild`. See `extensions/README.md` in the project repo for the format.
+Enable them in `.env`, then run `just rebuild`:
+
+```sh
+WORKSPACES_EXTENSIONS="pi claude"
+WORKSPACES_EXTENSIONS_DIR=/path/to/workspaces/project/extensions
+```
+
+`WORKSPACES_EXTENSIONS_DIR` is the `extensions/` directory of a project
+checkout. See `extensions/README.md` there for the format.
 
 | Extension | Purpose |
 |---|---|
@@ -61,7 +81,7 @@ just rebuild     # recreate from scratch (keeps named volumes)
 just down        # stop and remove the stack
 ```
 
-- Base image: `workspaces_base:dev`, built from the project repo by `just base`.
+- Base image: `workspaces_base:dev`, built in the project repo by `just base-build`.
 - Workspace image: built from `Dockerfile` (extends the base, installs the
   enabled extensions).
 - Docker/Podman differences live only in `scripts/engine.sh`.
@@ -73,6 +93,8 @@ just down        # stop and remove the stack
   git credentials work; nothing is forwarded into the container.
 - **Files owned by root** — ensure `HOST_UID`/`HOST_GID` match your host ids;
   on Podman use the `compose.podman.yaml` overlay.
+- **Base image missing or the wrong version** — run `just base-build` in a
+  project checkout whose `workspaces.base.version` matches `BASE_VERSION`.
 - **Extension not found** — the name in `WORKSPACES_EXTENSIONS` must match a
   directory in `WORKSPACES_EXTENSIONS_DIR`.
 - **`unsupported index version`** — git on the host is newer than in the image;

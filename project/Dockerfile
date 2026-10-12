@@ -11,6 +11,11 @@
 ###############################################################################
 FROM ubuntu:24.04
 
+# Bump when anything a workspace relies on changes: the workspaces_* scripts,
+# the workspace user, or /opt/extensions. Matches BASE_VERSION in the template's
+# scripts/engine.sh.
+LABEL workspaces.base.version="1"
+
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USERNAME=workspaces_user
 ARG HOST_UID=1000

@@ -5,8 +5,8 @@
 #
 # Usage: engine.sh <command> [args...]
 #
-#   preflight            validate the engine and create .env if missing
-#   ensure-base          build the base image from WORKSPACES_PROJECT_DIR if absent
+#   preflight            validate the engine and base image, create .env if missing
+#   ensure-base          check the base image exists and matches BASE_VERSION
 #   up                   start the workspace (devcontainer CLI, else compose)
 #   up --compose         force the raw compose path
 #   down                 stop and remove the stack
@@ -34,9 +34,11 @@ if [ -f .env ]; then
     set +a
 fi
 
+# Must match the workspaces.base.version label set by the project's Dockerfile.
+BASE_VERSION=1
+
 base_image="${WORKSPACES_BASE_IMAGE:-workspaces_base:dev}"
-project_dir="${WORKSPACES_PROJECT_DIR:-../project}"
-extensions_dir="${WORKSPACES_EXTENSIONS_DIR:-${project_dir}/extensions}"
+extensions_dir="${WORKSPACES_EXTENSIONS_DIR:-}"
 stage_dir=.workspaces/extensions
 
 compose_args=(-f compose.yaml -f compose.override.yaml)
@@ -51,6 +53,11 @@ fi
 # where the workspace Dockerfile installs them.
 rm -rf "$stage_dir"
 mkdir -p "$stage_dir"
+if [ -n "${WORKSPACES_EXTENSIONS:-}" ] && [ -z "$extensions_dir" ]; then
+    echo "engine.sh: WORKSPACES_EXTENSIONS is set but WORKSPACES_EXTENSIONS_DIR is not." >&2
+    echo "           Point it at extensions/ in a project checkout (see AGENTS.md)." >&2
+    exit 1
+fi
 for name in ${WORKSPACES_EXTENSIONS:-}; do
     if [ ! -d "${extensions_dir}/${name}" ]; then
         echo "engine.sh: extension '${name}' not found in ${extensions_dir}" >&2
@@ -115,6 +122,7 @@ preflight() {
         "$ENGINE" info >/dev/null 2>&1 || { echo "docker daemon not reachable" >&2; exit 1; }
     fi
     ensure_env
+    ensure_base
     if have_dc; then
         "$DEVCONTAINER" --version >/dev/null
         echo "engine.sh: using $ENGINE + devcontainer CLI"
@@ -125,15 +133,15 @@ preflight() {
 }
 
 ensure_base() {
-    if [ -n "$("$ENGINE" images -q "$base_image" 2>/dev/null)" ]; then
-        return 0
+    local version
+    if ! version="$("$ENGINE" image inspect --format '{{ index .Config.Labels "workspaces.base.version" }}' "$base_image" 2>/dev/null)"; then
+        echo "engine.sh: base image ${base_image} not found." >&2
+        echo "           Build it with 'just base-build' in the project repo (see AGENTS.md)." >&2
+        exit 1
     fi
-    if [ -f "${project_dir}/Dockerfile" ]; then
-        echo "engine.sh: building base image ${base_image} from ${project_dir}" >&2
-        "$ENGINE" build -t "$base_image" -f "${project_dir}/Dockerfile" "$project_dir"
-    else
-        echo "engine.sh: base image ${base_image} missing and ${project_dir}/Dockerfile not found." >&2
-        echo "           set WORKSPACES_PROJECT_DIR or run 'just base' in the project repo." >&2
+    if [ "$version" != "$BASE_VERSION" ]; then
+        echo "engine.sh: base image ${base_image} is version '${version}', this workspace needs ${BASE_VERSION}." >&2
+        echo "           Rebuild it with 'just base-build' in a matching project checkout (see AGENTS.md)." >&2
         exit 1
     fi
 }

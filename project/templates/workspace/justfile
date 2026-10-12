@@ -10,7 +10,6 @@ set shell := ["bash", "-uc"]
 # Start the environment from a fresh checkout.
 init:
     scripts/engine.sh preflight
-    scripts/engine.sh ensure-base
     @if [ ! -d .west ]; then west init -l manifest; fi
     west update
     scripts/engine.sh up
@@ -19,10 +18,6 @@ init:
 # West + git network operations run on the host, never in the container.
 update:
     west update
-
-# Build the base image from a sibling project checkout.
-base:
-    @cd "{{ env_var_or_default('WORKSPACES_PROJECT_DIR', '../project') }}" && just base-build
 
 up:
     scripts/engine.sh up

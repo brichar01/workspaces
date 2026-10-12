@@ -12,9 +12,10 @@ In the workspace `.env`, list the extensions by directory name:
 WORKSPACES_EXTENSIONS="pi claude"
 ```
 
-Then run `just rebuild`. `scripts/engine.sh` copies each listed extension from
-`WORKSPACES_EXTENSIONS_DIR` (default `<project>/extensions`) into the
-workspace's gitignored `.extensions/` directory. The workspace image installs
+Set `WORKSPACES_EXTENSIONS_DIR` to the absolute path of this directory, or of
+any directory of extensions, then run `just rebuild`. `scripts/engine.sh` copies
+each listed extension into the workspace's gitignored `.workspaces/extensions/`
+directory. The workspace image installs
 everything there. Credentials go in `.env`, never in an extension.
 
 ## Layout
@@ -36,5 +37,6 @@ An extension runs as root at build time. Only enable extensions you trust.
 ## Add your own
 
 Put the directory anywhere, then point `WORKSPACES_EXTENSIONS_DIR` at its
-parent, or copy it into this directory. A tool's own repository is a good home
+parent, or copy it into this directory. One workspace reads from one
+extensions directory. A tool's own repository is a good home
 for its extension.

@@ -13,7 +13,7 @@ added as extensions.
 | `scripts/entrypoint.sh` | Runs each installed extension's start hooks. |
 | `scripts/install-extensions.sh` | Runs each staged extension's `install.sh` at image build. |
 | `scripts/doctor.sh` | Health checks, usable on host and in the container. Runs extension checks. |
-| `templates/workspace/` | Files copied into each workspace instance. |
+| `templates/workspace/` | Files copied into each workspace instance. Each workspace is its own git repository. |
 | `docs/BOOTSTRAP.md` | The runbook an agent follows to set up a workspace from a repo list. |
 
 ## Concepts
@@ -25,6 +25,11 @@ added as extensions.
 - **Extension**: a directory that adds a tool to a workspace at build, start,
   compose and doctor time. A workspace enables extensions in its `.env`. See
   `extensions/README.md`.
+
+A workspace needs only the base image, built here with `just base-build`. It
+can be cloned on its own, anywhere. The base image carries a
+`workspaces.base.version` label, and a workspace refuses to start on a base
+image whose version it does not expect.
 
 The workspace root is the west topdir. `manifest/west.yml` is tracked by the
 workspace repo. west clones each project as a gitignored subdirectory.
